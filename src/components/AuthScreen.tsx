@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { checkCredentials } from "../api/greenApi";
+import { checkCredentials, ensureIncomingWebhookEnabled } from "../api/greenApi";
 import type { Credentials } from "../types";
 
 interface Props {
@@ -24,11 +24,20 @@ export function AuthScreen({ apiUrl, onApiUrlChange, onSubmit }: Props) {
     setError(null);
     const creds = { idInstance: idInstance.trim(), apiTokenInstance: apiTokenInstance.trim() };
     const ok = await checkCredentials(creds, apiUrl);
-    setChecking(false);
     if (!ok) {
+      setChecking(false);
       setError("Не удалось авторизоваться. Проверьте idInstance, apiTokenInstance и apiUrl.");
       return;
     }
+    // ReceiveNotification only delivers incoming messages if this is on;
+    // it's off by default on a fresh instance, so make sure it's enabled.
+    try {
+      await ensureIncomingWebhookEnabled(creds, apiUrl);
+    } catch {
+      // Non-fatal: login still proceeds, incoming messages just may not arrive
+      // until the instance settings are checked manually.
+    }
+    setChecking(false);
     onSubmit(creds);
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   deleteNotification,
   receiveNotification,
@@ -25,7 +25,6 @@ export function useChats(creds: Credentials | null, apiUrl: string) {
   const [chats, setChats] = useState<Chat[]>(() => loadChats());
   const [polling, setPolling] = useState(false);
   const [pollError, setPollError] = useState<string | null>(null);
-  const stopRef = useRef(false);
 
   useEffect(() => {
     saveChats(chats);
@@ -64,11 +63,11 @@ export function useChats(creds: Credentials | null, apiUrl: string) {
   // Long-polling loop for incoming messages (technology-http-api).
   useEffect(() => {
     if (!creds) return;
-    stopRef.current = false;
+    let stopped = false;
 
     async function loop() {
       setPolling(true);
-      while (!stopRef.current) {
+      while (!stopped) {
         try {
           const startedAt = Date.now();
           const notification = await receiveNotification(creds!, apiUrl, 20);
@@ -115,7 +114,7 @@ export function useChats(creds: Credentials | null, apiUrl: string) {
 
     loop();
     return () => {
-      stopRef.current = true;
+      stopped = true;
     };
   }, [creds, apiUrl, appendMessage, upsertChat]);
 

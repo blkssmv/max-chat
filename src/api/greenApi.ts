@@ -84,3 +84,48 @@ export async function checkCredentials(
     return false;
   }
 }
+
+interface InstanceSettings {
+  webhookUrl?: string;
+  incomingWebhook?: "yes" | "no";
+  [key: string]: unknown;
+}
+
+async function getSettings(
+  creds: Credentials,
+  apiUrl: string
+): Promise<InstanceSettings> {
+  const url = `${baseUrl(creds, apiUrl)}/getSettings/${creds.apiTokenInstance}`;
+  const res = await fetch(url);
+  return handle(res);
+}
+
+async function setSettings(
+  creds: Credentials,
+  apiUrl: string,
+  settings: Partial<InstanceSettings>
+): Promise<unknown> {
+  const url = `${baseUrl(creds, apiUrl)}/setSettings/${creds.apiTokenInstance}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  return handle(res);
+}
+
+/**
+ * ReceiveNotification (technology-http-api) only delivers incoming messages
+ * if the instance has `incomingWebhook: "yes"` — this is off by default on
+ * a freshly created instance. Checks the current setting and turns it on
+ * if needed, so receiving works without a manual trip to the GREEN-API console.
+ */
+export async function ensureIncomingWebhookEnabled(
+  creds: Credentials,
+  apiUrl: string
+): Promise<void> {
+  const settings = await getSettings(creds, apiUrl);
+  if (settings.incomingWebhook !== "yes") {
+    await setSettings(creds, apiUrl, { incomingWebhook: "yes" });
+  }
+}
