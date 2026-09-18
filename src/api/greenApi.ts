@@ -57,6 +57,9 @@ export async function receiveNotification(
 ): Promise<{ receiptId: number; body: IncomingMessageNotification } | null> {
   const url = `${baseUrl(creds, apiUrl)}/receiveNotification/${creds.apiTokenInstance}?receiveTimeout=${timeout}`;
   const res = await fetch(url);
+  // 408 here just means "no notification showed up before receiveTimeout" —
+  // the expected outcome of a long-poll wait, not an error.
+  if (res.status === 408) return null;
   return handle(res);
 }
 
